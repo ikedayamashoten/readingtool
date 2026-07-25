@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>英語長文 問題メーカー</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    background: #f5f6f8; color: #1c1e21; margin: 0; padding: 20px;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #667085; font-size: 13px; margin: 0 0 20px; }
+  .card { background: #fff; border: 1px solid #e3e6ea; border-radius: 12px; padding: 20px; margin-bottom: 18px; }
+  label { font-weight: 600; font-size: 14px; display: block; margin-bottom: 6px; }
+  textarea {
+    width: 100%; min-height: 180px; padding: 12px; border: 1px solid #cfd4da;
+    border-radius: 8px; font-size: 14px; font-family: Georgia, serif; line-height: 1.6; resize: vertical;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 16px; }
+  .field { flex: 1; min-width: 180px; }
+  select { width: 100%; padding: 9px 10px; border: 1px solid #cfd4da; border-radius: 8px; font-size: 14px; background: #fff; }
+  .hint { font-size: 12px; color: #8a909a; margin-top: 6px; }
+  .trow { display:flex; align-items:center; gap:12px; margin-top:8px; }
+  .trow .tlabel { font-weight:600; font-size:13px; min-width:56px; color:#344054; }
+  .trow select { flex:1; max-width:320px; }
+  .rewrite { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-top:10px; padding:10px 12px; background:#f0f6ff; border:1px solid #d3e2fb; border-radius:8px; }
+  .rw-title { font-size:13px; font-weight:600; color:#1e40af; }
+  .rewrite select { width:auto; padding:6px 10px; }
+  .rewrite button { background:#fff; border:1px solid #2563eb; color:#2563eb; font-weight:600; font-size:13px; padding:7px 14px; border-radius:8px; cursor:pointer; }
+  .rewrite button:disabled { opacity:.5; cursor:default; }
+  .rw-status { font-size:12px; color:#557; }
+  button.gen {
+    margin-top: 18px; background: #2563eb; color: #fff; border: none; padding: 12px 22px;
+    font-size: 15px; font-weight: 700; border-radius: 8px; cursor: pointer;
+  }
+  button.gen:disabled { background: #9db8ef; cursor: default; }
+  .toolbar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar button {
+    background: #fff; border: 1px solid #cfd4da; padding: 8px 14px; border-radius: 8px;
+    font-size: 13px; cursor: pointer; font-weight: 600;
+  }
+  #status { font-size: 13px; color: #667085; margin-top: 10px; min-height: 18px; }
+  #output { display: none; }
+  .out-body {
+    background: #fff; border: 1px solid #e3e6ea; border-radius: 12px; padding: 26px;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; line-height: 1.95;
+  }
+  .out-body h2 { font-size: 16px; background: #f0f2f5; padding: 6px 10px; border-left: 5px solid #2563eb; margin: 22px 0 10px; }
+  .out-body .passage { border: 1px solid #ddd; background: #fafbfc; padding: 16px 20px; font-family: Georgia, serif; line-height: 2.05; }
+  .out-body .ans { color: #b00020; font-weight: bold; }
+  .out-body u { text-underline-offset: 3px; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid #c9d6f5; border-top-color:#2563eb; border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px; margin-right:6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .answer-sheet { margin-top: 28px; border-top: 2px dashed #d0d5dd; padding-top: 8px; }
+  @media print {
+    body { background:#fff; padding:0; }
+    .card, .toolbar, h1, .sub, #status { display:none !important; }
+    #output { display:block !important; }
+    .out-body { border:none; padding:0; }
+    .answer-sheet { page-break-before: always; border-top:none; margin-top:0; padding-top:0; }
+    body.print-q #aPart { display:none !important; }
+    body.print-a #qPart { display:none !important; }
+    body.print-a .answer-sheet { page-break-before: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>英語長文 問題メーカー</h1>
+  <p class="sub">お好きな英語長文を貼り付け、大問数を選んで「問題を作成」を押すだけ。解答・解説付きで生成されます（Gemini APIを使用）。</p>
+
+  <div class="card">
+    <label for="passage">① 長文を貼り付け</label>
+    <textarea id="passage" placeholder="ここに英語の長文を貼り付けてください（150〜600語程度が目安）"></textarea>
+
+    <div class="rewrite">
+      <span class="rw-title">CEFRレベルに自動リライト：</span>
+      <select id="cefr">
+        <option>A1</option>
+        <option>A2</option>
+        <option selected>B1</option>
+        <option>B2</option>
+        <option>C1</option>
+        <option>C2</option>
+      </select>
+      <button id="rewriteBtn" type="button">選んだレベルに書き換える</button>
+      <span id="rwStatus" class="rw-status"></span>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="count">② 大問数</label>
+        <select id="count">
+          <option value="1">1問</option>
+          <option value="2">2問</option>
+          <option value="3" selected>3問</option>
+          <option value="4">4問</option>
+          <option value="5">5問</option>
+          <option value="6">6問</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="level">③ レベル</label>
+        <select id="level">
+          <option>共通テスト</option>
+          <option selected>難関大二次</option>
+          <option>中堅私大</option>
+          <option>高校標準</option>
+          <option>中学</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="lang">④ 設問の言語</label>
+        <select id="lang">
+          <option selected>日本語</option>
+          <option>英語（All English）</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <label>⑤ 大問ごとの設問タイプ</label>
+      <div id="typeRows"></div>
+      <p class="hint">「おまかせ」を選ぶと、その大問はAIが本文に合うタイプを選びます。</p>
+    </div>
+
+    <button class="gen" id="genBtn">問題を作成</button>
+    <div id="status"></div>
+  </div>
+
+  <div id="output">
+    <div class="toolbar">
+      <button id="printQ">🖨 問題を印刷</button>
+      <button id="printA">🖨 解答を印刷（別紙）</button>
+      <button id="printAll">🖨 まとめて印刷</button>
+      <button id="copyBtn">📋 テキストをコピー</button>
+    </div>
+    <div class="out-body" id="outBody">
+      <div id="qPart"></div>
+      <div id="aPart" class="answer-sheet"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const genBtn = document.getElementById('genBtn');
+const statusEl = document.getElementById('status');
+const output = document.getElementById('output');
+const outBody = document.getElementById('outBody');
+
+// ===== サーバー側(api/generate.js)経由でGeminiを呼ぶ =====
+async function askAI(prompt) {
+  const r = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ('サーバーエラー ' + r.status));
+  return data.text || '';
+}
+
+// 入力を記憶
+let pendingTypes = [];
+try {
+  const saved = localStorage.getItem('qm_state');
+  if (saved) {
+    const s = JSON.parse(saved);
+    if (s.passage) document.getElementById('passage').value = s.passage;
+    if (s.count) document.getElementById('count').value = s.count;
+    if (s.level) document.getElementById('level').value = s.level;
+    if (s.lang) document.getElementById('lang').value = s.lang;
+    if (Array.isArray(s.types)) pendingTypes = s.types;
+  }
+} catch(e) {}
+function saveState() {
+  try {
+    localStorage.setItem('qm_state', JSON.stringify({
+      passage: document.getElementById('passage').value,
+      count: document.getElementById('count').value,
+      level: document.getElementById('level').value,
+      lang: document.getElementById('lang').value,
+      types: getRowValues()
+    }));
+  } catch(e) {}
+}
+
+const TYPE_OPTIONS = ['おまかせ','内容一致（記号選択）','内容説明（日本語記述）','空所補充・語彙','下線部和訳','要約','整序英作文'];
+const DEFAULTS = ['内容一致（記号選択）','空所補充・語彙','下線部和訳','内容説明（日本語記述）','要約','整序英作文'];
+
+function renderRows() {
+  const n = parseInt(document.getElementById('count').value, 10);
+  const container = document.getElementById('typeRows');
+  let prev = getRowValues();
+  if (prev.length === 0 && pendingTypes.length) { prev = pendingTypes; pendingTypes = []; }
+  container.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const row = document.createElement('div');
+    row.className = 'trow';
+    const lab = document.createElement('span');
+    lab.className = 'tlabel';
+    lab.textContent = '大問' + (i + 1);
+    const sel = document.createElement('select');
+    sel.className = 'qtype';
+    TYPE_OPTIONS.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt; o.textContent = opt;
+      sel.appendChild(o);
+    });
+    sel.value = prev[i] || DEFAULTS[i] || 'おまかせ';
+    sel.addEventListener('change', saveState);
+    row.appendChild(lab); row.appendChild(sel);
+    container.appendChild(row);
+  }
+}
+function getRowValues() {
+  return Array.from(document.querySelectorAll('.qtype')).map(s => s.value);
+}
+
+function buildPrompt(passage, count, level, lang, assign) {
+  const assignLines = assign.map((t, i) =>
+    `　- 大問${i + 1}：${t === 'おまかせ' ? '本文に最も適したタイプをおまかせで選ぶ' : t}`
+  ).join('\n');
+  const langLine = lang.startsWith('日本語')
+    ? '設問文・選択肢・解説はすべて日本語で書く（本文英語はそのまま）。'
+    : '設問文・選択肢・解説はすべて英語で書く。';
+  return `あなたは日本の高校・大学受験の英語教材を作るプロの英語科教員です。以下の英語長文から、入試問題プリントを作成してください。
+
+【レベル】${level}
+【大問数】ちょうど ${count} 問（大問1〜大問${count}）
+【各大問の設問タイプ（必ずこの割り当て通りに作る）】
+${assignLines}
+【言語】${langLine}
+
+【厳守事項】
+- 必ず本文の内容だけに基づいて作問し、本文にない事実を作らない。
+- 各設問には必ず正解を用意し、記号選択は選択肢を4つ用意する。誤答の選択肢も本文の語で自然に作る。
+- 和訳・整序・空所補充で本文の特定箇所を指す場合は、本文中の該当語句を <u>...</u> で下線表示し、(1)(2)のように番号を振る。
+- 出力は必ず次の構造のHTML断片のみ。前置き・後書き・コードフェンス(\`\`\`)は一切書かない。
+
+出力HTMLの形式：
+<h2>本文</h2>
+<div class="passage">（本文。下線を引く箇所は &lt;u&gt;で囲み番号を付す）</div>
+<h2>大問1　（タイプ名）</h2>
+（設問。選択肢はア イ ウ エ で改行）
+… 大問${count} まで繰り返す …
+<h2>解答・解説</h2>
+（各大問の正解を <span class="ans">正解</span> で示し、簡潔な解説を付ける）
+
+本文：
+"""${passage}"""`;
+}
+
+// 解答見出しの直前で問題と解答を分割
+function splitAnswers(html) {
+  const m = html.match(/<h2[^>]*>\s*(?:解答|Answer)/i);
+  if (m && m.index > 0) {
+    return { q: html.slice(0, m.index), a: html.slice(m.index) };
+  }
+  return { q: html, a: '<h2>解答・解説</h2><p>（解答部分を自動抽出できませんでした。上に含まれている場合があります。）</p>' };
+}
+
+function cleanOutput(txt) {
+  if (typeof txt !== 'string') {
+    txt = (txt && (txt.text || txt.content || txt.output)) || JSON.stringify(txt);
+  }
+  return txt.replace(/^```(?:html)?\s*/i, '').replace(/```\s*$/,'').trim();
+}
+
+genBtn.addEventListener('click', async () => {
+  const passage = document.getElementById('passage').value.trim();
+  if (passage.length < 40) {
+    statusEl.textContent = '⚠️ 長文をもう少し長く貼り付けてください。';
+    return;
+  }
+  saveState();
+  const count = document.getElementById('count').value;
+  const level = document.getElementById('level').value;
+  const lang = document.getElementById('lang').value;
+  const assign = getRowValues();
+
+  genBtn.disabled = true;
+  output.style.display = 'none';
+  statusEl.innerHTML = '<span class="spinner"></span>問題を作成中です…（15〜40秒ほどかかります）';
+
+  try {
+    const prompt = buildPrompt(passage, count, level, lang, assign);
+    const res = await askAI(prompt);
+    const html = cleanOutput(res);
+    const parts = splitAnswers(html);
+    document.getElementById('qPart').innerHTML = parts.q;
+    document.getElementById('aPart').innerHTML = parts.a;
+    output.style.display = 'block';
+    statusEl.textContent = '✅ 完成しました。内容を確認し、必要なら手直ししてお使いください。';
+    output.scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    statusEl.textContent = '⚠️ 生成に失敗しました（' + (e && e.message ? e.message : e) + '）';
+  } finally {
+    genBtn.disabled = false;
+  }
+});
+
+// 初期化：大問数に応じてタイプ選択欄を生成
+document.getElementById('count').addEventListener('change', () => { renderRows(); saveState(); });
+['passage','level','lang'].forEach(id =>
+  document.getElementById(id).addEventListener('change', saveState)
+);
+renderRows();
+
+// CEFRリライト
+const CEFR_DESC = {
+  'A1': '入門。中学初級の基本語彙と非常に短く単純な文。',
+  'A2': '初級。日常的な基本語彙と短い単文・重文中心。',
+  'B1': '中級。一般的な語彙と平易な複文。高校標準程度。',
+  'B2': '中上級。抽象語もある程度含み、複文・受動態など多様な構造。',
+  'C1': '上級。学術的・専門的語彙と複雑で洗練された文構造。',
+  'C2': 'ネイティブ上級。高度な語彙・比喩・凝った文体も可。'
+};
+const rewriteBtn = document.getElementById('rewriteBtn');
+rewriteBtn.addEventListener('click', async () => {
+  const passageEl = document.getElementById('passage');
+  const passage = passageEl.value.trim();
+  const rwStatus = document.getElementById('rwStatus');
+  if (passage.length < 40) {
+    rwStatus.textContent = '⚠️ 先に長文を貼り付けてください。';
+    return;
+  }
+  const level = document.getElementById('cefr').value;
+  rewriteBtn.disabled = true;
+  rwStatus.innerHTML = '<span class="spinner"></span>' + level + ' にリライト中…';
+  try {
+    const prompt = `あなたは英語教材のリライトの専門家です。次の英文を CEFR ${level} レベルの学習者向けに書き換えてください。
+
+【${level}の目安】${CEFR_DESC[level] || ''}
+【条件】
+- 元の英文の主題・論旨・段落構成・おおよその長さは保つ。
+- 語彙の難易度・文の長さ・文法構造を ${level} に合わせて調整する（難しくも易しくもしすぎない）。
+- 自然で正しい英語にする。日本語や説明は書かない。
+- 出力はリライト後の英文本文のみ。前置き・引用符・見出し・コードフェンスは付けない。
+
+元の英文：
+"""${passage}"""`;
+    const out = cleanOutput(await askAI(prompt));
+    if (out) {
+      passageEl.value = out;
+      saveState();
+      rwStatus.textContent = '✅ ' + level + ' にリライトしました。この本文で問題を作成できます。';
+    } else {
+      rwStatus.textContent = '⚠️ リライト結果を取得できませんでした。もう一度お試しください。';
+    }
+  } catch (e) {
+    rwStatus.textContent = '⚠️ リライトに失敗しました（' + (e && e.message ? e.message : e) + '）';
+  } finally {
+    rewriteBtn.disabled = false;
+  }
+});
+
+// 印刷（問題のみ / 解答のみ / まとめて）
+function printWith(mode) {
+  if (mode) document.body.classList.add(mode);
+  const cleanup = () => document.body.classList.remove('print-q', 'print-a');
+  window.addEventListener('afterprint', cleanup, { once: true });
+  window.print();
+  setTimeout(cleanup, 1000);
+}
+document.getElementById('printQ').addEventListener('click', () => printWith('print-q'));
+document.getElementById('printA').addEventListener('click', () => printWith('print-a'));
+document.getElementById('printAll').addEventListener('click', () => printWith(null));
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const text = outBody.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const b = document.getElementById('copyBtn');
+    const o = b.textContent; b.textContent = '✅ コピーしました';
+    setTimeout(() => b.textContent = o, 1500);
+  });
+});
+</script>
+</body>
+</html>
