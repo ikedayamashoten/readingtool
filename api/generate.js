@@ -2,10 +2,22 @@
 // このファイルは「api」フォルダの中に置いてください（api/generate.js）。
 // ブラウザ(index.html)からプロンプトを受け取り、サーバー側で Gemini API を呼びます。
 // APIキーは環境変数 GEMINI_API_KEY から読み込みます（ブラウザには絶対に出しません）。
+// ★ログイン済み（クッキー auth=1）の人だけが使えるよう、入口でチェックします。
+
+function isLoggedIn(req) {
+  const raw = req.headers.cookie || '';
+  return raw.split(';').some(c => c.trim() === 'auth=1');
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'POST でアクセスしてください。' });
+    return;
+  }
+
+  // ログイン確認
+  if (!isLoggedIn(req)) {
+    res.status(401).json({ error: 'ログインが必要です。' });
     return;
   }
 
@@ -27,11 +39,11 @@ export default async function handler(req, res) {
     }
 
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-                model + ':generateContent?key=' + apiKey;
+                model + ':generateContent';
 
     const r = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.7 }
