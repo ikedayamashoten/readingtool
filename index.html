@@ -3,15 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>英語長文 問題メーカー</title>
+<title>長文問題作成ツール</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
   body {
     font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
-    background: #f5f6f8; color: #1c1e21; margin: 0; padding: 20px;
+    background: #e8f1fb; color: #1c1e21; margin: 0; padding: 20px;
     line-height: 1.7;
   }
+  .footer { text-align:center; font-size:12px; color:#5b6b7d; margin:36px 0 8px; }
   .wrap { max-width: 900px; margin: 0 auto; }
   h1 { font-size: 20px; margin: 0 0 4px; }
   .sub { color: #667085; font-size: 13px; margin: 0 0 20px; }
@@ -58,10 +59,11 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .answer-sheet { margin-top: 28px; border-top: 2px dashed #d0d5dd; padding-top: 8px; }
   #app { display: none; }
-  #loginOverlay { display:none; position:fixed; inset:0; background:#eef1f5; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  #loginOverlay { display:none; position:fixed; inset:0; background:#e8f1fb; align-items:center; justify-content:center; z-index:50; padding:20px; }
   .login-card { background:#fff; border:1px solid #e3e6ea; border-radius:14px; padding:28px; width:100%; max-width:380px; box-shadow:0 6px 24px rgba(0,0,0,.06); }
   .login-card h2 { margin:0 0 6px; font-size:20px; }
-  .login-sub { margin:0 0 14px; font-size:13px; color:#667085; line-height:1.6; }
+  .login-title { font-size:26px; font-weight:800; color:#1c3d63; text-align:center; margin:0 0 10px; letter-spacing:.02em; }
+  .login-sub { margin:0 0 16px; font-size:13px; color:#667085; line-height:1.6; text-align:center; }
   .login-card label { font-size:13px; margin:12px 0 4px; }
   .login-card input { width:100%; padding:10px; border:1px solid #cfd4da; border-radius:8px; font-size:14px; }
   #loginBtn { margin-top:20px; width:100%; background:#2563eb; color:#fff; border:none; padding:12px; font-size:15px; font-weight:700; border-radius:8px; cursor:pointer; }
@@ -85,8 +87,8 @@
 <body>
 <div id="loginOverlay">
   <div class="login-card">
-    <h2>ログイン</h2>
-    <p class="login-sub">登録済みのメールアドレスと共通パスワードでログインしてください。</p>
+    <div class="login-title">長文問題作成ツール</div>
+    <p class="login-sub">学校コード・メールアドレス・パスワードを入力してください</p>
     <label for="li_school">学校コード</label>
     <input id="li_school" type="text" autocomplete="off">
     <label for="li_email">メールアドレス</label>
@@ -99,8 +101,8 @@
 </div>
 <div class="wrap" id="app">
   <div class="userbar"><span id="greet"></span><button id="logoutBtn" type="button">ログアウト</button></div>
-  <h1>英語長文 問題メーカー</h1>
-  <p class="sub">お好きな英語長文を貼り付け、大問数を選んで「問題を作成」を押すだけ。解答・解説付きで生成されます。</p>
+  <h1>長文問題作成ツール</h1>
+  <p class="sub">長文を貼り付け、大問数を選択。解答・解説付きで生成されます。</p>
 
   <div class="card">
     <label for="passage">① 長文を貼り付け</label>
@@ -173,6 +175,8 @@
       <div id="aPart" class="answer-sheet"></div>
     </div>
   </div>
+
+  <div class="footer">長文問題作成ツール　powered by 敷島書店</div>
 </div>
 
 <script>
