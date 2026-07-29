@@ -98,6 +98,7 @@
     <button id="loginBtn" type="button">ログイン</button>
     <div id="loginMsg"></div>
   </div>
+  <div class="footer" style="position:absolute; bottom:16px; left:0; right:0;">長文問題作成ツール　powered by 敷島書店</div>
 </div>
 <div class="wrap" id="app">
   <div class="userbar"><span id="greet"></span><button id="logoutBtn" type="button">ログアウト</button></div>
@@ -106,7 +107,7 @@
 
   <div class="card">
     <label for="passage">① 長文を貼り付け</label>
-    <textarea id="passage" placeholder="ここに英語の長文を貼り付けてください（150〜600語程度が目安）"></textarea>
+    <textarea id="passage" placeholder="ここに英語の長文を貼り付けてください。"></textarea>
 
     <div class="rewrite">
       <span class="rw-title">CEFRレベルに自動リライト：</span>
@@ -273,7 +274,7 @@ function saveState() {
   } catch(e) {}
 }
 
-const TYPE_OPTIONS = ['おまかせ','内容一致（記号選択）','内容説明（日本語記述）','空所補充・語彙','下線部和訳','要約','整序英作文'];
+const TYPE_OPTIONS = ['おまかせ','内容一致（記号選択）','内容説明（日本語記述）','空所補充・語彙','下線部和訳','要約','整序英作文','TF問題（正誤判定）'];
 const DEFAULTS = ['内容一致（記号選択）','空所補充・語彙','下線部和訳','内容説明（日本語記述）','要約','整序英作文'];
 
 function renderRows() {
@@ -323,6 +324,8 @@ ${assignLines}
 【厳守事項】
 - 必ず本文の内容だけに基づいて作問し、本文にない事実を作らない。
 - 各設問には必ず正解を用意し、記号選択は選択肢を4つ用意する。誤答の選択肢も本文の語で自然に作る。
+- 記号選択の選択肢は必ず縦に並べる：1行に1つずつ、各選択肢を <div>ア　…</div> <div>イ　…</div> のように分けて書く（横に並べない）。
+- TF問題（正誤判定）は、本文の内容について英語の文を4〜5個示し、それぞれ True / False を判定させる形式にする。各文は <div>1. 英文</div> のように縦に並べ、文末に（ T ・ F ）を付ける。
 - 和訳・整序・空所補充で本文の特定箇所を指す場合は、本文中の該当語句を <u>...</u> で下線表示し、(1)(2)のように番号を振る。
 - 出力は必ず次の構造のHTML断片のみ。前置き・後書き・コードフェンス(\`\`\`)は一切書かない。
 
@@ -330,7 +333,7 @@ ${assignLines}
 <h2>本文</h2>
 <div class="passage">（本文。下線を引く箇所は &lt;u&gt;で囲み番号を付す）</div>
 <h2>大問1　（タイプ名）</h2>
-（設問。選択肢はア イ ウ エ で改行）
+（設問。選択肢は1行に1つずつ縦に並べる）
 … 大問${count} まで繰り返す …
 <h2>解答・解説</h2>
 （各大問の正解を <span class="ans">正解</span> で示し、簡潔な解説を付ける）
