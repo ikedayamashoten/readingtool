@@ -35,6 +35,12 @@
   .rewrite button { background:#fff; border:1px solid #2563eb; color:#2563eb; font-weight:600; font-size:13px; padding:7px 14px; border-radius:8px; cursor:pointer; }
   .rewrite button:disabled { opacity:.5; cursor:default; }
   .rw-status { font-size:12px; color:#557; }
+  .genbox { margin-top:10px; padding:14px; background:#f4f9f4; border:1px solid #cfe5cf; border-radius:8px; }
+  .genbox .rw-title { color:#1e6b34; }
+  .genbox input[type="text"] { width:100%; padding:9px 10px; border:1px solid #cfd4da; border-radius:8px; font-size:14px; }
+  .genbox label { font-size:13px; margin-bottom:4px; }
+  .gpbtn { margin-top:12px; background:#fff; border:1px solid #1e6b34; color:#1e6b34; font-weight:600; font-size:13px; padding:8px 14px; border-radius:8px; cursor:pointer; }
+  .gpbtn:disabled { opacity:.5; cursor:default; }
   button.gen {
     margin-top: 18px; background: #2563eb; color: #fff; border: none; padding: 12px 22px;
     font-size: 15px; font-weight: 700; border-radius: 8px; cursor: pointer;
@@ -59,7 +65,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .answer-sheet { margin-top: 28px; border-top: 2px dashed #d0d5dd; padding-top: 8px; }
   #app { display: none; }
-  #loginOverlay { display:none; position:fixed; inset:0; background:#e8f1fb; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  #loginOverlay { display:none; position:fixed; inset:0; background:#e8f1fb; flex-direction:column; align-items:center; justify-content:center; gap:24px; z-index:50; padding:20px; overflow:auto; }
   .login-card { background:#fff; border:1px solid #e3e6ea; border-radius:14px; padding:28px; width:100%; max-width:380px; box-shadow:0 6px 24px rgba(0,0,0,.06); }
   .login-card h2 { margin:0 0 6px; font-size:20px; }
   .login-title { font-size:26px; font-weight:800; color:#1c3d63; text-align:center; margin:0 0 10px; letter-spacing:.02em; }
@@ -98,7 +104,7 @@
     <button id="loginBtn" type="button">ログイン</button>
     <div id="loginMsg"></div>
   </div>
-  <div class="footer" style="position:absolute; bottom:16px; left:0; right:0;">長文問題作成ツール　powered by 敷島書店</div>
+  <div class="footer" style="margin:0;">長文問題作成ツール　powered by 敷島書店</div>
 </div>
 <div class="wrap" id="app">
   <div class="userbar"><span id="greet"></span><button id="logoutBtn" type="button">ログアウト</button></div>
@@ -106,8 +112,26 @@
   <p class="sub">長文を貼り付け、大問数を選択。解答・解説付きで生成されます。</p>
 
   <div class="card">
-    <label for="passage">① 長文を貼り付け</label>
+    <label for="passage">① 長文を貼り付け（または下の「長文を自動生成」を使う）</label>
     <textarea id="passage" placeholder="ここに英語の長文を貼り付けてください。"></textarea>
+
+    <div class="genbox">
+      <div class="rw-title" style="margin-bottom:8px">✏️ 長文を自動生成（貼り付ける長文がないとき）</div>
+      <div class="row" style="margin-top:0">
+        <div class="field"><label for="gp_topic">トピック・場面</label><input id="gp_topic" type="text" placeholder="例：空港でのアナウンス／AIと仕事の未来"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label for="gp_grammar">文法事項（任意）</label><input id="gp_grammar" type="text" placeholder="例：関係代名詞、仮定法過去"></div>
+        <div class="field" style="max-width:130px"><label for="gp_cefr">CEFRレベル</label>
+          <select id="gp_cefr"><option>A1</option><option>A2</option><option selected>B1</option><option>B2</option><option>C1</option><option>C2</option></select>
+        </div>
+        <div class="field" style="max-width:130px"><label for="gp_len">長さ</label>
+          <select id="gp_len"><option>約150語</option><option selected>約250語</option><option>約400語</option><option>約600語</option></select>
+        </div>
+      </div>
+      <button id="genPassageBtn" type="button" class="gpbtn">長文を生成して貼り付け欄に入れる</button>
+      <span id="gpStatus" class="rw-status"></span>
+    </div>
 
     <div class="rewrite">
       <span class="rw-title">CEFRレベルに自動リライト：</span>
@@ -397,6 +421,45 @@ document.getElementById('count').addEventListener('change', () => { renderRows()
   document.getElementById(id).addEventListener('change', saveState)
 );
 renderRows();
+
+// 長文の自動生成
+const genPassageBtn = document.getElementById('genPassageBtn');
+genPassageBtn.addEventListener('click', async () => {
+  const topic = document.getElementById('gp_topic').value.trim();
+  const grammar = document.getElementById('gp_grammar').value.trim();
+  const level = document.getElementById('gp_cefr').value;
+  const len = document.getElementById('gp_len').value;
+  const gpStatus = document.getElementById('gpStatus');
+  if (!topic) { gpStatus.textContent = '⚠️ トピック・場面を入力してください。'; return; }
+  genPassageBtn.disabled = true;
+  gpStatus.innerHTML = '<span class="spinner"></span>長文を生成中…';
+  try {
+    const grammarLine = grammar
+      ? `- 次の文法事項を自然な形で複数回含める：${grammar}`
+      : '';
+    const prompt = `あなたは日本の学校向け英語教材を作る専門家です。英語の読解用長文を1本書いてください。
+
+【条件】
+- トピック・場面：${topic}
+- CEFRレベル：${level}（${CEFR_DESC[level] || ''}）
+- 長さ：${len}程度
+- 3〜5段落構成の自然でまとまりのある文章にする（教科書や入試の長文らしい文体）
+${grammarLine}
+- 出力は英語の本文のみ。タイトル・日本語・説明・引用符・コードフェンスは一切付けない。`;
+    const out = cleanOutput(await askAI(prompt));
+    if (out) {
+      document.getElementById('passage').value = out;
+      saveState();
+      gpStatus.textContent = '✅ 生成しました。内容を確認して「問題を作成」に進めます。';
+    } else {
+      gpStatus.textContent = '⚠️ 生成結果を取得できませんでした。もう一度お試しください。';
+    }
+  } catch (e) {
+    gpStatus.textContent = '⚠️ 生成に失敗しました（' + (e && e.message ? e.message : e) + '）';
+  } finally {
+    genPassageBtn.disabled = false;
+  }
+});
 
 // CEFRリライト
 const CEFR_DESC = {
