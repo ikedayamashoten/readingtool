@@ -395,25 +395,60 @@ function splitAnswers(html) {
   return { q: html, a: '<h2>解答・解説</h2><p>（解答部分を自動抽出できませんでした。上に含まれている場合があります。）</p>' };
 }
 
-// 整序英作文：AIが申告した原文を、本文中で確実に空所〔整序A〕へ置き換える（プログラムによる確実な処理）
+// 整序英作文：本文中の答えを確実に空所〔整序A〕へ置き換える（プログラムによる確実な処理）
+// 方式1: AIが <span class="sj-src"> で原文を申告した場合
+// 方式2: AIが指示を無視して「下線部(n)」方式で出力した場合の自動修復（保険）
 function fixSeijo() {
   const qEl = document.getElementById('qPart');
+  const aEl = document.getElementById('aPart');
   const passage = qEl.querySelector('.passage');
-  const srcs = Array.from(document.querySelectorAll('#outBody .sj-src'));
-  if (!passage || srcs.length === 0) return;
-  const labels = ['A','B','C','D','E','F'];
-  srcs.forEach((sp, i) => {
+  if (!passage) return;
+  const LB = ['A','B','C','D','E','F','G','H'];
+  let li = 0;
+
+  // 方式1
+  Array.from(document.querySelectorAll('#outBody .sj-src')).forEach(sp => {
     const s = (sp.textContent || '').trim();
     sp.remove();
     if (!s) return;
-    // 空白やタグを挟んでも一致するよう、単語ごとに柔軟なパターンを作る
     const tokens = s.split(/\s+/).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const core = tokens.join('(?:\\s|<[^>]+>)+');
-    const re = new RegExp('(?:<u[^>]*>\\s*)?' + core + '(?:\\s*<\\/u>)?');
-    const html = passage.innerHTML;
-    if (re.test(html)) {
-      passage.innerHTML = html.replace(re, '<u>〔整序' + (labels[i] || (i+1)) + '〕</u>');
+    const re = new RegExp('(?:<u[^>]*>\\s*)?' + tokens.join('(?:\\s|<[^>]+>)+') + '(?:\\s*<\\/u>)?');
+    if (re.test(passage.innerHTML)) {
+      passage.innerHTML = passage.innerHTML.replace(re, '<u>〔整序' + LB[li] + '〕</u>');
+      li++;
     }
+  });
+
+  // 方式2：整序の大問が「下線部(n)」を参照している場合、本文の該当下線部を空所化する
+  const hs = Array.from(qEl.querySelectorAll('h2')).filter(h => /整序/.test(h.textContent));
+  hs.forEach(h => {
+    let txt = '';
+    for (let n = h.nextElementSibling; n && n.tagName !== 'H2'; n = n.nextElementSibling) {
+      txt += n.textContent || '';
+    }
+    const m = txt.match(/下線部\s*[（(]?\s*(\d+)/);
+    if (!m) return;
+    const num = m[1];
+    // <u>…</u>(n) と <u>…(n)</u> の両方に対応
+    const re1 = new RegExp('<u[^>]*>((?:(?!<\\/u>)[\\s\\S])*?)<\\/u>\\s*[（(]' + num + '[）)]');
+    const re2 = new RegExp('<u[^>]*>((?:(?!<\\/u>)[\\s\\S])*?)[（(]' + num + '[）)]\\s*<\\/u>');
+    let re = null;
+    if (re1.test(passage.innerHTML)) re = re1;
+    else if (re2.test(passage.innerHTML)) re = re2;
+    if (!re) return;
+    const label = LB[li]; li++;
+    passage.innerHTML = passage.innerHTML.replace(re, '<u>〔整序' + label + '〕</u>');
+    // 設問と解答の「下線部(n)」表記を「空所〔整序A〕」に置き換える
+    const fixText = root => {
+      const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const rx = new RegExp('下線部\\s*[（(]?\\s*' + num + '\\s*[）)]?', 'g');
+      let nd;
+      while ((nd = w.nextNode())) {
+        if (rx.test(nd.nodeValue)) nd.nodeValue = nd.nodeValue.replace(rx, '空所〔整序' + label + '〕');
+      }
+    };
+    for (let n = h.nextElementSibling; n && n.tagName !== 'H2'; n = n.nextElementSibling) fixText(n);
+    if (aEl) fixText(aEl);
   });
 }
 
